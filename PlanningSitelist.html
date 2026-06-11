@@ -88,26 +88,32 @@
   .tbl{width:100%;}
   .tbl-head,.tbl-row{
     display:grid;
-    grid-template-columns:minmax(0,1.5fr) minmax(0,1.05fr) minmax(0,1.05fr) minmax(130px,.85fr) minmax(95px,.6fr) minmax(185px,auto);
-    align-items:center;gap:12px;
+    grid-template-columns:minmax(0,1.35fr) minmax(0,1.55fr) minmax(130px,.8fr) minmax(95px,.55fr) 215px;
+    align-items:center;gap:24px;
   }
   .tbl-head{
     padding:8px 16px;border-bottom:1px solid var(--line);
     font-size:14px;font-weight:600;color:var(--text);
   }
-  .tbl-head .h-date{grid-column:2 / span 2;text-align:left;}
-  .tbl-row{padding:12px 16px;}
+  .tbl-row{padding:8px 12px;}
   .tbl-row:nth-child(even){background:var(--row-alt);}
 
-  .site-cell{display:flex;align-items:center;gap:18px;min-width:0;}
-  .site-name{font-weight:700;font-size:14px;white-space:nowrap;}
-  .last-edited{
-    display:inline-flex;align-items:center;gap:6px;
-    font-size:10px;color:var(--text-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  .site-cell{display:flex;align-items:center;gap:14px;min-width:0;}
+  .site-name{
+    flex:1;min-width:0;font-weight:700;font-size:14px;line-height:1.3;
+    overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
   }
+  .last-edited{
+    display:flex;flex-direction:column;gap:2px;flex:0 0 auto;
+    font-size:12px;color:var(--text-soft);white-space:nowrap;
+  }
+  .last-edited .le-label{display:inline-flex;align-items:center;gap:6px;}
   .last-edited svg{width:14px;height:14px;flex:0 0 auto;}
+  .last-edited .le-time{font-weight:700;padding-left:20px;}
 
-  .date-cell{display:flex;align-items:center;gap:10px;justify-content:flex-end;}
+  /* Announcement + Bid Date grouped in one column */
+  .date-group{display:flex;align-items:center;gap:18px;min-width:0;}
+  .date-pair{display:flex;    align-items: flex-start; gap: 2px; flex: 1; min-width: 0; flex-direction: column;}
   .date-label{font-size:12px;color:var(--text-soft);white-space:nowrap;}
   .date-input{
     width:100%;max-width:118px;min-width:78px;
@@ -133,7 +139,21 @@
   .amount-clear:hover{color:var(--text);background:#EEE;}
   .amount-clear svg{width:15px;height:15px;}
 
-  .exec-cell{font-size:14px;font-weight:700;text-align:center;}
+  .exec-cell{font-size:14px;font-weight:700;text-align:left;}
+
+  /* floating tooltip for truncated site names */
+  .tooltip{
+    position:fixed;z-index:100;pointer-events:none;
+    background:#1B1B27;color:#fff;padding:8px 12px;border-radius:8px;
+    font-size:13px;font-weight:600;line-height:1.4;max-width:340px;
+    box-shadow:0 8px 24px rgba(7,4,60,.25);
+    opacity:0;visibility:hidden;transition:opacity .12s ease;
+  }
+  .tooltip.show{opacity:1;visibility:visible;}
+  .tooltip::after{
+    content:"";position:absolute;top:100%;left:18px;
+    border:6px solid transparent;border-top-color:#1B1B27;
+  }
 
   .actions-cell{display:flex;align-items:center;gap:10px;justify-content:flex-end;}
   .btn-planning{
@@ -192,9 +212,9 @@
       <div class="tbl">
         <div class="tbl-head">
           <div>Site name</div>
-          <div class="h-date">Date</div>
-          <div style="grid-column:4;text-align:center;">Estimated Amount</div>
-          <div style="grid-column:5;text-align:center;">Execution Amount</div>
+          <div>Date</div>
+          <div>Estimated<br>Amount</div>
+          <div>Execution Amount</div>
           <div></div>
         </div>
         <div id="rows"></div>
@@ -213,18 +233,18 @@ const SVG = {
    dates: 'filled' | 'filled-muted' | 'empty' | 'empty-muted'
    est:   'input-filled' | 'input-empty' */
 const ROWS = [
-  {dates:'filled',       est:'input-empty'},
-  {dates:'filled-muted', est:'input-filled'},
-  {dates:'filled',       est:'input-filled'},
-  {dates:'empty-muted',  est:'input-filled'},
-  {dates:'empty',        est:'input-filled'},
-  {dates:'filled-muted', est:'input-filled'},
-  {dates:'empty',        est:'input-filled'},
-  {dates:'empty-muted',  est:'input-filled'},
-  {dates:'filled',       est:'input-filled'},
-  {dates:'filled-muted', est:'input-filled'},
-  {dates:'empty',        est:'input-empty'},
-  {dates:'empty-muted',  est:'input-filled'}
+  {name:'Tochigi Highway Road Work',            dates:'filled',       est:'input-empty'},
+  {name:'Site Name',                            dates:'filled-muted', est:'input-filled'},
+  {name:'Shin-Tomei Expressway Embankment and Slope Stabilization Works Phase 2 (North Section)', dates:'filled', est:'input-filled'},
+  {name:'Site Name',                            dates:'empty-muted',  est:'input-filled'},
+  {name:'Kanto Region Dam Excavation',          dates:'empty',        est:'input-filled'},
+  {name:'Site Name',                            dates:'filled-muted', est:'input-filled'},
+  {name:'Site Name',                            dates:'empty',        est:'input-filled'},
+  {name:'Tochigi Highway Road Work',            dates:'empty-muted',  est:'input-filled'},
+  {name:'Site Name',                            dates:'filled',       est:'input-filled'},
+  {name:'Site Name',                            dates:'filled-muted', est:'input-filled'},
+  {name:'Site Name',                            dates:'empty',        est:'input-empty'},
+  {name:'Site Name',                            dates:'empty-muted',  est:'input-filled'}
 ];
 
 function dateInput(variant){
@@ -250,16 +270,21 @@ function estCell(variant){
 document.getElementById('rows').innerHTML = ROWS.map(r=>`
   <div class="tbl-row">
     <div class="site-cell">
-      <span class="site-name">Site Name</span>
-      <span class="last-edited">${SVG.clock} Last Edited: 00:00 mm/dd/yyyy</span>
+      <span class="site-name">${r.name}</span>
+      <span class="last-edited">
+        <span class="le-label">${SVG.clock} Last Edited:</span>
+        <span class="le-time">00:00 mm/dd/yyyy</span>
+      </span>
     </div>
-    <div class="date-cell">
-      <span class="date-label">Announcement</span>
-      ${dateInput(r.dates)}
-    </div>
-    <div class="date-cell">
-      <span class="date-label">Bid Date</span>
-      ${dateInput(r.dates)}
+    <div class="date-group">
+      <span class="date-pair">
+        <span class="date-label">Announcement</span>
+        ${dateInput(r.dates)}
+      </span>
+      <span class="date-pair">
+        <span class="date-label">Bid Date</span>
+        ${dateInput(r.dates)}
+      </span>
     </div>
     ${estCell(r.est)}
     <div class="exec-cell">$128,940</div>
@@ -277,6 +302,24 @@ document.querySelectorAll('.amount-clear').forEach(b=>{
 // Planning button opens the execution planning page
 document.querySelectorAll('.btn-planning').forEach(b=>{
   b.addEventListener('click',()=>{ location.href='planning.html'; });
+});
+
+// tooltip: show full site name on hover, only when the text is truncated
+const tip = document.createElement('div');
+tip.className = 'tooltip';
+document.body.appendChild(tip);
+
+document.querySelectorAll('.site-name').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{
+    if(el.scrollHeight <= el.clientHeight + 1) return; // fully visible — no tooltip
+    tip.textContent = el.textContent.trim();
+    tip.classList.add('show');
+    const r = el.getBoundingClientRect();
+    tip.style.left = r.left + 'px';
+    tip.style.top = '0px'; // place first so height is measurable
+    tip.style.top = (r.top - tip.offsetHeight - 10) + 'px';
+  });
+  el.addEventListener('mouseleave',()=>tip.classList.remove('show'));
 });
 </script>
 </body>
