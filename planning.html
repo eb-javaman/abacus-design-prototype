@@ -961,7 +961,7 @@
   <div class="breadcrumb">
     <a href="PlanningSitelist.html">Site List</a>
     <span class="sep">›</span>
-    <p>Tochigi-Highway-Site-A</p>
+    <p id="crumbSiteName">Tochigi-Highway-Site-A</p>
     <span id="planPill" class="plan-pill" title="Open Plan Settings">Create a Plan</span>
     <div class="header-actions">
       <button id="btnAcquire" class="btn secondary" disabled title="Available after a Simulation Plan is imported">
@@ -1461,6 +1461,74 @@ const state = {
   _drawerSnapshot: null, // captured on open, restored on Cancel/X/scrim
 };
 
+/* ============================================================
+   Per-site persistence (localStorage, client-side only)
+   Key: abacus.planning.<siteId> → JSON snapshot of `state`.
+   The state shape is untouched — Sets/transients are converted
+   only at the serialize/deserialize boundary.
+============================================================ */
+const SITE_ID = new URLSearchParams(location.search).get('siteId')
+  || localStorage.getItem('abacus.currentSiteId')
+  || null;
+
+function loadPlanState(siteId) {
+  if (!siteId) return null;
+  try {
+    const raw = localStorage.getItem('abacus.planning.' + siteId);
+    if (!raw) return null;
+    const snap = JSON.parse(raw);
+    snap.expanded = new Set(snap.expanded || []); // Array → Set
+    return snap;
+  } catch (_e) { return null; }
+}
+
+let _persistTimer = null, _persistFlush = null;
+function savePlanState(siteId, st) {
+  if (!siteId) return;
+  // a never-touched plan stays unsaved so the list shows no badge for it
+  const pristine = !st.planName && !st.rows.length && !st.simulationRun && !st.imported && !st.acquired;
+  if (pristine) return;
+  const write = () => {
+    _persistFlush = null;
+    try {
+      const snap = Object.assign({}, st, {
+        expanded: [...st.expanded],  // Set → Array
+        editMode: false,             // always reopen in View mode
+        rowsBackup: null,
+        dirty: false,
+        selectedId: null,
+        _activeRowId: null,
+        _drawerSnapshot: null,
+      });
+      localStorage.setItem('abacus.planning.' + siteId, JSON.stringify(snap));
+    } catch (_e) { /* storage unavailable — prototype keeps working in-memory */ }
+  };
+  clearTimeout(_persistTimer);
+  _persistFlush = write;
+  _persistTimer = setTimeout(write, 300);
+}
+// flush a pending debounced save when leaving the page
+window.addEventListener('beforeunload', () => {
+  if (_persistFlush) { clearTimeout(_persistTimer); _persistFlush(); }
+});
+
+// Hydrate saved state (in-progress or finalized site). A site with no
+// snapshot falls through to the fresh init above untouched.
+(function hydratePlanState() {
+  const saved = loadPlanState(SITE_ID);
+  if (saved) Object.assign(state, saved);
+})();
+
+// Reflect the opened site's name in the breadcrumb (from the persisted site list)
+(function setCrumbSiteName() {
+  try {
+    const sites = JSON.parse(localStorage.getItem('abacus.sites') || '[]');
+    const s = sites.find(x => x.id === SITE_ID);
+    const el = document.getElementById('crumbSiteName');
+    if (s && s.name && el) el.textContent = s.name;
+  } catch (_e) { /* keep the static demo name */ }
+})();
+
 /* No auto-populated rows — user adds parent tasks manually via Add Parent Task. */
 
 /* Post-import: split by Area + Block (per the spec example).
@@ -1824,6 +1892,9 @@ function render() {
   if (state._activeRowId && $('curDrawer').classList.contains('show') && typeof renderDetailsForm === 'function') {
     renderDetailsForm();
   }
+
+  // Persist this site's plan after every state change (debounced)
+  savePlanState(SITE_ID, state);
 }
 
 /**
