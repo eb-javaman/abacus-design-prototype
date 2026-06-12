@@ -264,7 +264,7 @@ function siteCard(cfg){
   return `
   <div class="site-card">
     <div class="sc-head">
-      <div class="sc-name">Site Name</div>
+      <div class="sc-name">${cfg.name || 'Site Name'}</div>
       <div class="sc-meta">
         <span class="updated">${ICON.clock} Last synced: 00:00 mm/dd/yyyy</span>
       </div>
@@ -300,19 +300,37 @@ function siteCard(cfg){
     <div class="chart">${cfg.chart==='line' ? lineChart() : barChart()}</div>
 
     <div class="sc-foot">
-      <button>${ICON.trend} Actuals (Overall)</button>
-      <button>${ICON.cal} Actuals (Daily)</button>
-      <button>${ICON.bars} Actuals (Summary)</button>
+      <button onclick="openActuals('${cfg.siteId || 'demo'}','cumulative')">${ICON.trend} Actuals (Overall)</button>
+      <button onclick="openActuals('${cfg.siteId || 'demo'}','daily')">${ICON.cal} Actuals (Daily)</button>
+      <button onclick="openActuals('${cfg.siteId || 'demo'}','summary')">${ICON.bars} Actuals (Summary)</button>
     </div>
   </div>`;
 }
 
-const CARDS = [
+function openActuals(siteId, tab){
+  location.href = 'actuals.html?siteId=' + encodeURIComponent(siteId) + '&tab=' + tab;
+}
+
+const STATIC_CARDS = [
   {status:'Syncing',        chart:'line', jp:false},
   {status:'Auto Acquiring', chart:'bar',  jp:true},
   {status:'Syncing',        chart:'line', jp:false, dimStart:true},
   {status:'Auto Acquiring', chart:'line', jp:false}
 ];
+
+// sites finalized via [Acquire Performance Data] surface here first
+function finalizedSiteCards(){
+  try{
+    const sites = JSON.parse(localStorage.getItem('abacus.sites') || '[]');
+    return sites.filter(s => {
+      try{
+        const snap = JSON.parse(localStorage.getItem('abacus.planning.' + s.id) || 'null');
+        return !!(snap && (snap.acquired || (snap.actuals && snap.actuals.finalized)));
+      }catch(_e){ return false; }
+    }).map(s => ({ name:s.name, siteId:s.id, status:'Auto Acquiring', chart:'line', updated:'Updated just now' }));
+  }catch(_e){ return []; }
+}
+const CARDS = [...finalizedSiteCards(), ...STATIC_CARDS];
 
 const wrap = document.getElementById('cards');
 wrap.innerHTML = CARDS.map(siteCard).join('');
