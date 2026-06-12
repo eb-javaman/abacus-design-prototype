@@ -111,6 +111,13 @@
   .badge-progress{background:#FFF4DC;color:#8A6400;border:1px solid #F0DCA8;}
   .badge-final{background:#EAFBEB;color:#167E1E;border:1px solid #BFEFC4;}
 
+  /* empty list state */
+  .empty-rows{
+    padding:54px 16px;text-align:center;
+    font-size:14px;color:var(--text-mute);line-height:1.6;
+  }
+  .empty-rows b{color:var(--text-soft);}
+
   .site-cell{display:flex;align-items:center;gap:14px;min-width:0;}
   .site-name{
     flex:1;min-width:0;font-weight:700;font-size:14px;line-height:1.3;
@@ -245,21 +252,18 @@ const SVG = {
 /* Row variants matching the design:
    dates: 'filled' | 'filled-muted' | 'empty' | 'empty-muted'
    est:   'input-filled' | 'input-empty' */
-const SEED_SITES = [
-  {id:'site-1', name:'Tochigi Highway Road Work',            dates:'filled', est:'input-empty'},
-  {id:'site-2', name:'Shin-Tomei Expressway Embankment and Slope Stabilization Works Phase 2 (North Section)', dates:'filled', est:'input-filled'},
-  {id:'site-3', name:'Kanto Region Dam Excavation',          dates:'empty',  est:'input-filled'}
-];
-
-/* ---- persisted site list (localStorage: abacus.sites) ---- */
+/* ---- persisted site list (localStorage: abacus.sites) ----
+   No demo seeds: the list starts empty and users begin by
+   registering a site. On load, stale entries (no saved planning
+   state and not user-registered) are cleaned out. */
 const SITES_KEY = 'abacus.sites';
+function hasPlanState(id){ return !!localStorage.getItem('abacus.planning.' + id); }
 function loadSites(){
-  try{
-    const raw = localStorage.getItem(SITES_KEY);
-    if(raw) return JSON.parse(raw);
-  }catch(_e){ /* corrupted entry — reseed below */ }
-  localStorage.setItem(SITES_KEY, JSON.stringify(SEED_SITES));
-  return JSON.parse(JSON.stringify(SEED_SITES));
+  let list = [];
+  try{ list = JSON.parse(localStorage.getItem(SITES_KEY) || '[]'); }catch(_e){ list = []; }
+  const cleaned = list.filter(s => s.status === 'new' || s.createdAt || hasPlanState(s.id));
+  if(cleaned.length !== list.length) saveSites(cleaned);
+  return cleaned;
 }
 function saveSites(list){
   try{ localStorage.setItem(SITES_KEY, JSON.stringify(list)); }catch(_e){}
@@ -299,6 +303,13 @@ function estCell(variant){
 }
 
 function renderRows(){
+  if(!sites.length){
+    document.getElementById('rows').innerHTML = `
+      <div class="empty-rows">
+        No sites yet — click <b>Register site for Quotation</b> to get started.
+      </div>`;
+    return;
+  }
   document.getElementById('rows').innerHTML = sites.map(r=>`
     <div class="tbl-row ${r.status==='new' ? 'is-new' : ''}">
       <div class="site-cell">
