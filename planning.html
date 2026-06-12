@@ -860,7 +860,7 @@
     right:-10px;
     background:linear-gradient(to right, rgba(0,0,0,0.10), rgba(0,0,0,0));
     border-left: solid var(--neutral-500) 1px;
-    
+
   }
   table.ep .col-amount::before {
     left:-10px;
@@ -1047,8 +1047,6 @@
         <thead>
           <tr>
             <th style="width:32px"></th>
-            <th class="col-wbs">WBS Code</th>
-            <th class="col-acct">Accounting Code</th>
             <th class="col-lv1">Task (Lv1)<span class="req">*</span></th>
             <th class="col-lv2">Task (Lv2)</th>
             <th class="col-lv3">Task (Lv3)</th>
@@ -1064,6 +1062,8 @@
             <th class="col-start">Start Date</th>
             <th class="col-end">End Date</th>
             <th class="col-rate">Unit Rate</th>
+            <th class="col-wbs">WBS Code</th>
+            <th class="col-acct">Accounting Code</th>
             <th class="col-amount">Amount</th>
             <th class="col-memo">Memo</th>
             <th class="col-actions">Actions</th>
@@ -1842,8 +1842,6 @@ function render() {
       <td>
         <button class="expand-btn ${isExpanded?'open':''}" onclick="toggleExpand('${r.id}')" title="${isExpanded?'Collapse':'Expand'} tasks" aria-label="${isExpanded?'Collapse':'Expand'}"><svg viewBox="0 0 12 12" width="10" height="10" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </td>
-      <td class="col-wbs">${cellInput(r.id,'wbs', r.wbs, {placeholder:'—'})}</td>
-      <td class="col-acct">${cellInput(r.id,'acct', r.acct, {placeholder:'—'})}</td>
       <td class="col-lv1">${cellInput(r.id,'lv1', r.lv1, {placeholder:'e.g. Earthwork (Fill)', listId:'dl_lv1'})}</td>
       <td class="col-lv2">${cellInput(r.id,'lv2', r.lv2, {placeholder:'e.g. Fill', listId:'dl_lv2'})}</td>
       <td class="col-lv3">${cellInput(r.id,'lv3', r.lv3, {placeholder:'e.g. Roadbed Fill', listId:'dl_lv3'})}</td>
@@ -1866,6 +1864,8 @@ function render() {
           </button>
         </div>
       </td>
+      <td class="col-wbs">${cellInput(r.id,'wbs', r.wbs, {placeholder:'—'})}</td>
+      <td class="col-acct">${cellInput(r.id,'acct', r.acct, {placeholder:'—'})}</td>
       <td class="num col-amount">${state.editMode && !state.acquired
         ? cellInput(r.id,'amount', r.amount, {kind:'num', placeholder:'0', prefix:'$'})
         : `<strong>${r.amount===''||r.amount==null ? '—' : fmt$(r.amount)}</strong>`}</td>
@@ -2144,8 +2144,11 @@ function applyDisplay() {
   });
   closeModal('displayModal');
   toast('Display settings saved', 'success');
-  // Column-visibility changed → re-evaluate freeze shadows
-  requestAnimationFrame(() => { if (typeof updateFreezeShadows === 'function') updateFreezeShadows(); });
+  // Column-visibility changed → recompute frozen offsets (WBS/Acct are right-frozen) + shadows
+  requestAnimationFrame(() => {
+    if (typeof updateStickyOffsets === 'function') updateStickyOffsets();
+    if (typeof updateFreezeShadows === 'function') updateFreezeShadows();
+  });
 }
 
 /* CUR catalog — would come from Knowledge Library in the live build */
