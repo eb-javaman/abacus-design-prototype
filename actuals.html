@@ -38,13 +38,16 @@
 
   /* ---------- Page header ---------- */
   .page-header { background:var(--white); border-bottom:1px solid var(--neutral-200); padding:12px; display:flex;flex-direction:column;gap:16px; }
-  .breadcrumb { font-size:12px; color:var(--neutral-600); display:flex; align-items:center; gap:6px; }
-  .breadcrumb a { color:var(--neutral-600); text-decoration:none; cursor:pointer; }
-  .breadcrumb a:hover { color:var(--indigo-500); }
-  .breadcrumb .sep { color:var(--neutral-400); }
+  .breadcrumb { font-size:13px; color:var(--neutral-600); display:flex; align-items:center; gap:8px; }
+  .breadcrumb a { color:var(--indigo-500); text-decoration:none; cursor:pointer; }
+  .breadcrumb a:hover { text-decoration:underline; }
+  .breadcrumb .sep { color:var(--neutral-700); }
+  .breadcrumb #crumbSiteName { font-size:16px; font-weight:600; color:var(--neutral-900); }
+  /* plan name (set on the planning page) shown as a green tag */
   .breadcrumb .plan-pill {
-    margin-left:8px; padding:8px; border:1px solid var(--indigo-500);
-    color:var(--indigo-500); border-radius:8px; font-weight:600;
+    margin-left:4px; padding:3px 10px;
+    background:var(--green-50); border:1px solid var(--green-500);
+    color:var(--green-700); border-radius:6px; font-weight:600; font-size:12px;
   }
 
   /* tabs */
@@ -58,20 +61,28 @@
   .tab.active { color:var(--indigo-600); border-bottom-color:var(--indigo-500); font-weight:600; }
 
   /* ---------- Actuals shared header ---------- */
-  .actuals-meta {display:flex; flex-direction:column; gap:8px;}
+  .actuals-meta {display:flex; flex-direction:column; gap:12px;}
   .actuals-meta .chips { display:flex; align-items:center; gap:12px; }
+  /* Last Synced — plain text with clock icon (no chip) */
+  .meta-plain {
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:13px; color:var(--neutral-700);
+  }
+  .meta-plain .ic { width:14px; height:14px; }
   .actuals-chip {
     display:inline-flex; align-items:center; gap:6px;
-    background:var(--indigo-50); border-radius:6px; padding:4px 8px;
-    font-size:12px; color:var(--neutral-700);
+    background:var(--indigo-50); border-radius:6px; padding:4px 10px;
+    font-size:13px; color:var(--neutral-700);
   }
   .actuals-chip strong { color:var(--neutral-900); }
   .actuals-chip .ic { width:13px; height:13px; }
-  .kpi-bar { display:flex; gap:32px;}
-  .kpi { display:flex;align-items:center; gap:4px; font-size:10px; color:var(--neutral-700);width:100%;}
-  .kpi p {width:auto; margin:0;}
-  .kpi strong { color:var(--neutral-900); font-size:12px; }
-  .kpi .track { width:30%; height:8px; border-radius:999px; background:var(--neutral-200); overflow:hidden; }
+  /* KPI row — five KPIs on a single line across the full width,
+     bar right after the value; bars flex-shrink to keep one row */
+  .kpi-bar {padding:0;margin:0;}
+  .kpi { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--neutral-800); white-space:nowrap; flex:1 1 auto; min-width:0; margin-right:24px}
+  .kpi p { margin:0; }
+  .kpi strong { color:var(--neutral-900); font-size:14px; font-weight:700; }
+  .kpi .track { height:9px; border-radius:999px; background:var(--neutral-200); overflow:hidden; flex:1 1 60px; width:60px; }
   .kpi .fill, .actuals-cellbar .fill {
     height:100%; border-radius:999px;
     background:linear-gradient(90deg, var(--green-500), #19B5A6 60%, var(--indigo-300));
@@ -237,7 +248,7 @@
 
 <div class="page-header">
   <div class="breadcrumb">
-    <a href="index.html">Ongoing Sites</a>
+    <a href="index.html">Site List</a>
     <span class="sep">›</span>
     <p id="crumbSiteName" style="margin:0;">Site Name</p>
     <span id="planPill" class="plan-pill">PlanName V1</span>
@@ -246,20 +257,20 @@
   <!-- shared Actuals header -->
   <div class="actuals-meta">
     <div class="chips">
-      <span class="actuals-chip">
+      <span class="meta-plain">
         <svg class="ic" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 5v3l2 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-        Last Synced: <strong id="actSyncedAt">00:00 mm/dd/yyyy</strong>
+        Last Synced: <span id="actSyncedAt">00:00 mm/dd/yyyy</span>
       </span>
       <span class="actuals-chip">Construction Period <strong>mm/dd/yyyy - mm/dd/yyyy</strong></span>
     </div>
-    <div class="kpi-bar">
-      <div class="kpi"><p>Total Start Rate: <strong>50%</strong></p><span class="track"><span class="fill" style="display:block;width:50%"></span></span></div>
-      <div class="kpi"><p>Total Elapsed Time Rate <strong>60%</strong></p><span class="track"><span class="fill" style="display:block;width:60%"></span></span></div>
-      <div class="kpi"><p>Total Progress Rate <strong>80%</strong></p><span class="track"><span class="fill" style="display:block;width:80%"></span></span></div>
-      <div class="kpi"><p>Total Cost Rate <strong>40%</strong></p><span class="track"><span class="fill" style="display:block;width:40%"></span></span></div>
-      <div class="kpi"><p>Total Expenditure Rate <strong>80%</strong></p><span class="track"><span class="fill" style="display:block;width:80%"></span></span></div>
+    <ul class="kpi-bar">
+      <li class="kpi"><p>Total Start Rate: <strong>50%</strong></p><span class="track"><span class="fill" style="display:block;width:50%"></span></span></li>
+      <li class="kpi"><p>Total Elapsed Time Rate <strong>60%</strong></p><span class="track"><span class="fill" style="display:block;width:60%"></span></span></li>
+      <li class="kpi"><p>Total Progress Rate <strong>80%</strong></p><span class="track"><span class="fill" style="display:block;width:80%"></span></span></li>
+      <li class="kpi"><p>Total Cost Rate <strong>40%</strong></p><span class="track"><span class="fill" style="display:block;width:40%"></span></span></li>
+      <li class="kpi"><p>Total Expenditure Rate <strong>80%</strong></p><span class="track"><span class="fill" style="display:block;width:80%"></span></span></li>
     </div>
-  </div>
+  </ul>
 
   <div class="tabs-row">
     <div class="tabs" id="mainTabs">
