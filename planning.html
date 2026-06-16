@@ -260,6 +260,7 @@
   }
   .nested .title { font-size:13px; font-weight:700; color:var(--neutral-900); }
   .nested .subtitle { font-size:11px; color:var(--neutral-600); margin-top:2px; margin-bottom:10px; }
+  .resource-info {display:flex;display-direction:column}
   .chips { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
   .chip {
     font-size:11px; padding:3px 8px; background:var(--white); border:1px solid var(--neutral-200);
@@ -2114,10 +2115,8 @@ function renderNested(r) {
       <div>
         <div class="title">Simulation-generated Tasks</div>
         <div class="subtitle">
-          <span class="sc-legend edit">Assign a Resource Unit Price per resource / リソース単価を割り当て</span>
-          &nbsp;·&nbsp;
           <span class="sc-legend lock">Prices &amp; hours are Simulation/master-derived — read-only / 単価・時間は読み取り専用</span>
-          &nbsp;·&nbsp; Total Amount = Standard Price × Standard Hours
+          <span>Total Amount = Standard Price × Standard Hours</span>
         </div>
       </div>
       <div class="sc-meta">
