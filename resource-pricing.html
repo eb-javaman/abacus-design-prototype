@@ -490,6 +490,20 @@ function closeDrawer(){ scrim.classList.remove('show'); drawer.classList.remove(
 scrim.addEventListener('click', closeDrawer);
 
 /* ----- shared form markup ----- */
+// Category options for the MVP stage. Selecting from a fixed list (not free text)
+// keeps master categories consistent.
+const CATEGORY_OPTIONS = ['Machinery','Labor','Vehicle'];
+function categoryField(value){
+  const cur = value || '';
+  const known = CATEGORY_OPTIONS.includes(cur);
+  const opts = [
+    `<option value="" ${cur===''?'selected':''} disabled hidden>Select category</option>`,
+    ...CATEGORY_OPTIONS.map(o=>`<option value="${o}" ${o===cur?'selected':''}>${o}</option>`),
+    // preserve a pre-existing value that isn't in the MVP list so editing doesn't drop it
+    (!known && cur!=='') ? `<option value="${esc(cur)}" selected>${esc(cur)}</option>` : ''
+  ].join('');
+  return `<div class="field"><label>Category</label><select class="input" id="fCategory">${opts}</select></div>`;
+}
 function priceField(id,label,value){
   return `<div class="field"><label>${label}</label><input class="input" id="${id}" value="${value!=null?'$'+value:''}" inputmode="decimal" /></div>`;
 }
@@ -497,7 +511,7 @@ function formFields(r){
   r = r || {};
   return `
     <div class="field required"><label>Name</label><input class="input" id="fName" value="${esc(r.name||'')}" autocomplete="off" /></div>
-    <div class="field"><label>Category</label><input class="input" id="fCategory" value="${esc(r.category||'')}" /></div>
+    ${categoryField(r.category)}
     <div class="field"><label>Specification</label><input class="input" id="fSpec" value="${esc(r.specification||'')}" /></div>
     ${priceField('fStd','Standard Unit Price ($/h)', r.std)}
     ${priceField('fOt','Overtime Unit Price ($/h)', r.ot)}
