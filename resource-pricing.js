@@ -7,8 +7,9 @@
    Weekend-Holiday prices, then Unit Rate and Amount are derived from
    Standard Price × Standard Hours (planning uses standard hours only).
 
-   This drawer is search & select only — no create/edit/delete. Automatic
-   best-match / recommendation logic is explicitly deferred (manual MVP).
+   This drawer supports search, select, and register-new. Master prices are never
+   edited inline — "changing a price" means registering a NEW unit price and assigning
+   it. Automatic best-match / recommendation logic is explicitly deferred (manual MVP).
 
    Depends on globals defined in index.html: state, $, fmt$, toast,
    enterEdit, render, scTaskTotal.
@@ -124,10 +125,7 @@ function renderResourcePriceList() {
           : `<button class="btn btn-sm primary" onclick="applyResourcePrice('${p.id}')">apply</button>`}
       </div>
       <div class="rp-meta">Specs: ${p.specs} &nbsp;|&nbsp; Category: ${p.cat}</div>
-      ${applied ? '' : `<label class="rp-apply-all">
-        <input type="checkbox" checked data-rp-all="${p.id}" />
-        Apply to all rows using this resource
-      </label>`}
+      ${/* TODO(post-MVP): bulk "Apply to all rows using this resource" was here. */''}
     </div>`;
   }).join('');
 }
@@ -143,32 +141,63 @@ function applyResourcePrice(recId) {
   if (state.acquired) { closeResourcePriceDrawer(); toast('Planning is locked', 'error'); return; }
   if (!state.editMode) enterEdit();
 
-  const checkbox = document.querySelector(`#resPriceDrawer input[data-rp-all="${recId}"]`);
-  const applyAll = !!(checkbox && checkbox.checked);
-
-  const targets = [];
-  if (applyAll) {
-    state.rows.forEach(r => (r.sc ? r.sc.tasks : []).forEach(t => {
-      if (t.eqName === task.eqName) targets.push([r, t]);
-    }));
-  } else {
-    targets.push([row, task]);
-  }
-
-  targets.forEach(([, t]) => {
-    t.resource = { id: rec.id, name: rec.name, category: rec.category, std: rec.std };
-    t.std = rec.std;
-    t.ot = rec.ot;
-    t.we = rec.we;
-  });
-
-  new Set(targets.map(([r]) => r)).forEach(recomputeRowCost);
+  // TODO(post-MVP): bulk "apply to all rows using this resource". MVP applies to the active task only.
+  task.resource = { id: rec.id, name: rec.name, category: rec.category, std: rec.std };
+  task.std = rec.std;
+  task.ot = rec.ot;
+  task.we = rec.we;
+  recomputeRowCost(row);
 
   state.dirty = true;
   state.dirtyCost = true; // pricing is the Abacus cost layer — never re-triggers Simulation
   closeResourcePriceDrawer();
   render();
-  toast(`Applied "${rec.name}"${applyAll && targets.length > 1 ? ` to ${targets.length} tasks` : ''}`, 'success');
+  toast(`Applied "${rec.name}"`, 'success');
+}
+
+/* ---------- Register a new Resource Unit Price ----------
+   Master prices are never edited inline. "Changing a price" = registering a NEW unit
+   price (a new record) and assigning it. New records are immediately selectable. */
+let _rpRegisterOpen = false;
+
+function toggleRpRegister(open) {
+  _rpRegisterOpen = (open === undefined) ? !_rpRegisterOpen : !!open;
+  const form = document.getElementById('rp_register_form');
+  if (form) form.style.display = _rpRegisterOpen ? 'flex' : 'none';
+  if (_rpRegisterOpen) {
+    const n = document.getElementById('rp_reg_name');
+    if (n) n.focus();
+  } else {
+    ['rp_reg_name', 'rp_reg_category', 'rp_reg_specs', 'rp_reg_price'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+  }
+}
+
+function registerResourcePrice() {
+  const name = (document.getElementById('rp_reg_name').value || '').trim();
+  const category = (document.getElementById('rp_reg_category').value || '').trim() || 'Machinery';
+  const specs = (document.getElementById('rp_reg_specs').value || '').trim() || '—';
+  const price = Number(document.getElementById('rp_reg_price').value);
+
+  if (!name) { toast('Name is required', 'error'); document.getElementById('rp_reg_name').focus(); return; }
+  if (!isFinite(price) || price <= 0) { toast('Enter a valid price ($/h)', 'error'); document.getElementById('rp_reg_price').focus(); return; }
+
+  // OT / Weekend-Holiday seed from standard via typical multipliers (a later change = a new registration).
+  const rec = {
+    id: 'RP-' + Date.now(), category, name,
+    std: +price.toFixed(2), ot: +(price * 1.5).toFixed(2), we: +(price * 2).toFixed(2),
+    specs, cat: category,
+  };
+  RESOURCE_PRICES.unshift(rec);
+  toggleRpRegister(false);
+
+  // Surface the new record immediately so it can be selected.
+  const search = document.getElementById('rp_search_input');
+  if (search) search.value = name;
+  renderResourcePriceList();
+  toast(`Registered "${name}" — now selectable`, 'success');
 }
 
 /* Amount = Σ (Standard Price × Standard Hours) over priced tasks;
