@@ -31,6 +31,10 @@ const RESOURCE_PRICES = [
 
 const _rpState = { rowId: null, taskIdx: null };
 
+/* IDs registered during this session — always shown in the list (in addition to the
+   equipment matches) so a newly registered resource is never filtered out. */
+const _rpRegistered = [];
+
 function rpActiveTask() {
   const row = state.rows.find(r => r.id === _rpState.rowId);
   if (!row || !row.sc) return null;
@@ -91,9 +95,14 @@ function renderResourcePriceList() {
       (p.name + ' ' + p.category).toLowerCase().includes(q));
     showingLabel = `"${$('rp_search_input').value.trim()}"`;
   } else {
-    records = rpMatchesFor(task.eqName);
-    if (records.length) {
-      showingLabel = task.eqName;
+    const matches = rpMatchesFor(task.eqName);
+    // Always include session-registered resources, even if they don't match the equipment.
+    const registered = RESOURCE_PRICES.filter(p => _rpRegistered.includes(p.id) && !matches.includes(p));
+    if (matches.length) {
+      records = registered.concat(matches);   // newly registered shown first
+      showingLabel = registered.length
+        ? `${task.eqName} + ${registered.length} newly registered`
+        : task.eqName;
     } else {
       // No match for the Simulation equipment → fall back to the full list
       records = RESOURCE_PRICES;
@@ -125,6 +134,7 @@ function renderResourcePriceList() {
           : `<button class="btn btn-sm primary" onclick="applyResourcePrice('${p.id}')">apply</button>`}
       </div>
       <div class="rp-meta">Specs: ${p.specs} &nbsp;|&nbsp; Category: ${p.cat}</div>
+      <div class="rp-meta">Overtime / 時間外: <strong>${p.ot == null ? '--' : fmt$(p.ot) + '/h'}</strong> &nbsp;·&nbsp; Weekend/Holiday / 休日: <strong>${p.we == null ? '--' : fmt$(p.we) + '/h'}</strong></div>
       ${/* TODO(post-MVP): bulk "Apply to all rows using this resource" was here. */''}
     </div>`;
   }).join('');
@@ -199,13 +209,15 @@ function registerResourcePrice() {
     specs, cat: category,
   };
   RESOURCE_PRICES.unshift(rec);
+  _rpRegistered.unshift(rec.id);
   toggleRpRegister(false);
 
-  // Surface the new record immediately so it can be selected.
+  // Keep the existing list intact and add the new record to it (don't filter down to
+  // just the new one). Clearing any search returns to the equipment-match + registered view.
   const search = document.getElementById('rp_search_input');
-  if (search) search.value = name;
+  if (search) search.value = '';
   renderResourcePriceList();
-  toast(`Registered "${name}" — now selectable`, 'success');
+  toast(`Registered "${name}" — added to the list`, 'success');
 }
 
 /* Amount = Σ (Standard Price × Standard Hours) over priced tasks;
