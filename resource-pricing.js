@@ -168,7 +168,7 @@ function toggleRpRegister(open) {
     const n = document.getElementById('rp_reg_name');
     if (n) n.focus();
   } else {
-    ['rp_reg_name', 'rp_reg_category', 'rp_reg_specs', 'rp_reg_price'].forEach(id => {
+    ['rp_reg_name', 'rp_reg_category', 'rp_reg_specs', 'rp_reg_price', 'rp_reg_ot', 'rp_reg_we'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
@@ -180,14 +180,22 @@ function registerResourcePrice() {
   const category = (document.getElementById('rp_reg_category').value || '').trim() || 'Machinery';
   const specs = (document.getElementById('rp_reg_specs').value || '').trim() || '—';
   const price = Number(document.getElementById('rp_reg_price').value);
+  const otRaw = document.getElementById('rp_reg_ot').value;
+  const weRaw = document.getElementById('rp_reg_we').value;
 
   if (!name) { toast('Name is required', 'error'); document.getElementById('rp_reg_name').focus(); return; }
-  if (!isFinite(price) || price <= 0) { toast('Enter a valid price ($/h)', 'error'); document.getElementById('rp_reg_price').focus(); return; }
+  if (!isFinite(price) || price <= 0) { toast('Enter a valid standard price ($/h)', 'error'); document.getElementById('rp_reg_price').focus(); return; }
 
-  // OT / Weekend-Holiday seed from standard via typical multipliers (a later change = a new registration).
+  // Overtime / Weekend-Holiday rates are explicit when entered; otherwise seed from the
+  // standard rate via typical multipliers (×1.5 / ×2). A later change = a new registration.
+  const ot = otRaw.trim() === '' ? price * 1.5 : Number(otRaw);
+  const we = weRaw.trim() === '' ? price * 2   : Number(weRaw);
+  if (!isFinite(ot) || ot < 0) { toast('Enter a valid overtime price ($/h)', 'error'); document.getElementById('rp_reg_ot').focus(); return; }
+  if (!isFinite(we) || we < 0) { toast('Enter a valid weekend/holiday price ($/h)', 'error'); document.getElementById('rp_reg_we').focus(); return; }
+
   const rec = {
     id: 'RP-' + Date.now(), category, name,
-    std: +price.toFixed(2), ot: +(price * 1.5).toFixed(2), we: +(price * 2).toFixed(2),
+    std: +price.toFixed(2), ot: +ot.toFixed(2), we: +we.toFixed(2),
     specs, cat: category,
   };
   RESOURCE_PRICES.unshift(rec);
