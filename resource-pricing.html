@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Abacus · Resource Unit Price</title>
 <style>
-  /* ---------- Design tokens (shared with cur.html) ---------- */
+  /* ---------- Design tokens (shared across Abacus pages) ---------- */
   :root{
     --white:#FFFFFF;
     --indigo-50:#E5E4FB;
@@ -182,16 +182,24 @@
   .btn-save{background:var(--indigo-500);color:#fff;border:none;border-radius:9px;padding:10px 22px;font-size:14px;font-weight:700;}
   .btn-save:hover{background:var(--indigo-600);}
 
-  /* Usage Actuals (details) drawer */
-  .ua-row{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:8px 0;color:var(--text-soft);border-bottom:1px solid var(--line);}
-  .ua-row b{color:var(--text);}
-  .section-label{font-size:14px;font-weight:700;margin:22px 0 8px;}
-  .hist{padding:12px 0;border-bottom:1px solid var(--line);}
-  .hist-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
-  .hist-name{font-weight:700;font-size:14px;}
-  .hist-fig{color:var(--indigo-500);font-weight:700;font-size:13px;}
-  .hist-meta{font-size:12px;color:var(--text-mute);margin-top:4px;line-height:1.5;}
-  .ro-note{background:var(--chip-bg);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text-soft);margin-bottom:14px;}
+  /* Usage Actuals (details) — large read-only drawer */
+  .drawer.wide{width:82vw;max-width:1320px;border-top-left-radius:14px;}
+  .lg-head{align-items:center;padding:22px 30px;}
+  .crumb{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600;min-width:0;}
+  .crumb a{color:var(--indigo-500);text-decoration:none;cursor:pointer;white-space:nowrap;}
+  .crumb a:hover{text-decoration:underline;}
+  .crumb .sep{color:var(--text-mute);}
+  .crumb .cur{color:var(--text);font-weight:700;white-space:nowrap;}
+  .lg-body{padding:14px 30px 40px;overflow:auto;flex:1;min-height:0;}
+  .lg-toolbar{display:flex;justify-content:flex-end;margin-bottom:14px;}
+  .btn-update{display:inline-flex;align-items:center;gap:7px;background:none;border:none;color:var(--indigo-500);font-size:15px;font-weight:600;padding:6px 8px;border-radius:8px;}
+  .btn-update:hover{background:#F0EFFB;color:var(--indigo-600);}
+  .btn-update svg{width:16px;height:16px;}
+  table.act{width:100%;border-collapse:collapse;font-size:14px;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  table.act thead th{background:#fff;text-align:left;font-weight:700;color:var(--text);padding:15px 18px;border-bottom:1.5px solid var(--line-strong);vertical-align:top;line-height:1.4;}
+  table.act tbody td{padding:14px 18px;border-bottom:1px solid var(--line);color:var(--text);white-space:nowrap;}
+  table.act tbody tr:nth-child(even) td{background:#F7F7FB;}
+  table.act tbody tr:last-child td{border-bottom:none;}
 
   /* Modal (destructive only) */
   .modal-scrim{position:fixed;inset:0;background:rgba(15,12,45,.45);display:none;align-items:center;justify-content:center;z-index:80;padding:20px;}
@@ -207,7 +215,7 @@
   .btn-danger{background:var(--danger);color:#fff;border:none;border-radius:10px;padding:11px 28px;font-size:15px;font-weight:700;}
   .btn-danger:hover{background:#B81820;}
 
-  /* Toast (same as cur.html) */
+  /* Toast (shared Abacus toast UI) */
   .toast{position:fixed;bottom:32px;right:24px;background:var(--white);border:1.5px solid var(--line-strong);
     border-radius:8px;padding:12px 14px 12px 12px;display:none;align-items:flex-start;gap:10px;
     min-width:280px;max-width:420px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.12);color:var(--text);font-size:13px;
@@ -257,7 +265,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
         Knowledge
       </div>
-      <a href="cur.html" class="nav-item">Construction Unit Rates</a>
       <a href="resource-pricing.html" class="nav-item active">Resource Unit Price</a>
       <a class="nav-item">Past Sites</a>
     </div>
@@ -309,7 +316,8 @@ const SVG = {
   edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>',
   close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>',
   sort:'<svg class="sort-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>',
-  editBox:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 0.5H20C21.933 0.5 23.5 2.067 23.5 4V20C23.5 21.933 21.933 23.5 20 23.5H4C2.067 23.5 0.5 21.933 0.5 20V4C0.5 2.067 2.067 0.5 4 0.5Z" fill="white" stroke="#2F24E6"/><path d="M7 17.9981V15.9981H17V17.9981H7ZM8 14.9981V13.1231L12.525 8.59814L14.4 10.4731L9.875 14.9981H8ZM9 13.9981H9.45L13 10.4731L12.525 9.99814L9 13.5481V13.9981ZM14.9625 9.92314L13.0875 8.04814L13.9875 7.14814C14.0792 7.04814 14.1958 7.00014 14.3375 7.00414C14.4792 7.00847 14.5958 7.05647 14.6875 7.14814L15.8625 8.32314C15.9542 8.4148 16 8.52947 16 8.66714C16 8.80447 15.9542 8.92314 15.8625 9.02314L14.9625 9.92314Z" fill="#2F24E6"/></svg>'
+  editBox:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 0.5H20C21.933 0.5 23.5 2.067 23.5 4V20C23.5 21.933 21.933 23.5 20 23.5H4C2.067 23.5 0.5 21.933 0.5 20V4C0.5 2.067 2.067 0.5 4 0.5Z" fill="white" stroke="#2F24E6"/><path d="M7 17.9981V15.9981H17V17.9981H7ZM8 14.9981V13.1231L12.525 8.59814L14.4 10.4731L9.875 14.9981H8ZM9 13.9981H9.45L13 10.4731L12.525 9.99814L9 13.5481V13.9981ZM14.9625 9.92314L13.0875 8.04814L13.9875 7.14814C14.0792 7.04814 14.1958 7.00014 14.3375 7.00414C14.4792 7.00847 14.5958 7.05647 14.6875 7.14814L15.8625 8.32314C15.9542 8.4148 16 8.52947 16 8.66714C16 8.80447 15.9542 8.92314 15.8625 9.02314L14.9625 9.92314Z" fill="#2F24E6"/></svg>',
+  refresh:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>'
 };
 
 /* =====================================================================
@@ -319,23 +327,39 @@ const STORE_KEY = 'abacus.resources';
 const TYPES = ['Machinery','Transport Vehicle','Labor'];
 const LOREM = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, urna at elementum tempus, magna lorem tincidunt dolor, sed aliquam lectus augue vitae mauris. Curabitur viverra, arcu a ultricies dictum, orci ex fermentum velit, non pharetra libero dolor vitae lacus.';
 
+/* one actual-usage record (read-only); periods in YYYY/MM/DD〜YYYY/MM/DD */
+const ua = (site,cur,period,totalDays,stdDays,otHours,holidayDays) =>
+  ({site,cur,period,totalDays,stdDays,otHours,holidayDays});
+
 function seedResources(){
   return [
     {id:'res-1',type:'Machinery',name:'Backhoe',category:'In-house',specification:'10t',std:100,ot:100,wh:120,memo:LOREM,
-      usage:[{site:'Site A',period:'2026/01/10〜2026/04/20',qty:2,rateAt:100},{site:'Site C',period:'2025/09/01〜2025/12/10',qty:1,rateAt:95}]},
+      usage:[
+        ua('Site 001','Embankment','2025/12/01〜2026/03/15',45,20,30,0),
+        ua('Site 002','Embankment','2025/12/01〜2026/03/15',45,20,30,0),
+        ua('Site 003','Embankment','2025/12/01〜2026/03/15',45,20,30,0)
+      ]},
     {id:'res-2',type:'Machinery',name:'Bulldozer',category:'In-house',specification:'20t',std:100,ot:100,wh:120,memo:LOREM,
-      usage:[{site:'Site B',period:'2026/01/10〜2026/04/20',qty:1,rateAt:100}]},
+      usage:[ua('Site 004','Excavation','2025/09/01〜2025/12/10',35,18,22,2)]},
     {id:'res-3',type:'Machinery',name:'Vibratory Roller',category:'Outsource',specification:'0.7m³',std:100,ot:100,wh:120,memo:LOREM,
       usage:[]},
     {id:'res-4',type:'Transport Vehicle',name:'Dump Truck',category:'Outsource',specification:'10t',std:80,ot:100,wh:120,memo:LOREM,
-      usage:[{site:'Site A',period:'2026/01/10〜2026/04/20',qty:3,rateAt:80}]},
+      usage:[
+        ua('Site 001','Embankment','2025/12/01〜2026/03/15',45,20,30,0),
+        ua('Site 005','Hauling','2026/01/10〜2026/04/20',50,24,40,3)
+      ]},
     {id:'res-5',type:'Transport Vehicle',name:'Trailer',category:'Outsource',specification:'20t',std:120,ot:150,wh:180,memo:LOREM,
       usage:[]},
     {id:'res-6',type:'Labor',name:'Operator',category:'In-house',specification:'Standard',std:25,ot:35,wh:45,memo:LOREM,
-      usage:[{site:'Site A',period:'2026/01/10〜2026/04/20',qty:12,rateAt:25}]},
+      usage:[ua('Site 001','Embankment','2025/12/01〜2026/03/15',45,20,30,0)]},
     {id:'res-7',type:'Labor',name:'Worker',category:'In-house',specification:'Standard',std:20,ot:30,wh:40,memo:LOREM,
       usage:[]}
   ];
+}
+
+/* stored data is stale if any usage record predates the actuals-table shape */
+function usesCurrentShape(list){
+  return list.every(r => !Array.isArray(r.usage) || r.usage.every(u => u && 'totalDays' in u));
 }
 
 function loadResources(){
@@ -343,7 +367,7 @@ function loadResources(){
     const raw = localStorage.getItem(STORE_KEY);
     if(raw){
       const parsed = JSON.parse(raw);
-      if(Array.isArray(parsed) && parsed.length) return parsed;
+      if(Array.isArray(parsed) && parsed.length && usesCurrentShape(parsed)) return parsed;
     }
   }catch(e){ console.warn('Failed to read', STORE_KEY, e); }
   const seeded = seedResources();
@@ -462,7 +486,7 @@ function render(){ renderTabs(); renderTable(); }
    DRAWER open / close
 ===================================================================== */
 function openDrawer(){ scrim.classList.add('show'); drawer.classList.add('show'); drawer.setAttribute('aria-hidden','false'); }
-function closeDrawer(){ scrim.classList.remove('show'); drawer.classList.remove('show'); drawer.setAttribute('aria-hidden','true'); }
+function closeDrawer(){ scrim.classList.remove('show'); drawer.classList.remove('show','wide'); drawer.setAttribute('aria-hidden','true'); }
 scrim.addEventListener('click', closeDrawer);
 
 /* ----- shared form markup ----- */
@@ -499,6 +523,7 @@ function readForm(){
    REGISTER drawer  (registers into the active tab's type)
 ===================================================================== */
 function openRegisterDrawer(){
+  drawer.classList.remove('wide');
   drawerContent.innerHTML = `
     <div class="drawer-head">
       <div>
@@ -536,6 +561,7 @@ function confirmRegister(){
 function openEditDrawer(id){
   const r = getRes(id);
   if(!r) return;
+  drawer.classList.remove('wide');
   drawerContent.innerHTML = `
     <div class="drawer-head">
       <div>
@@ -577,33 +603,50 @@ function openUsageDrawer(id){
   const r = getRes(id);
   if(!r) return;
   const usage = r.usage || [];
+  drawer.classList.add('wide');
   drawerContent.innerHTML = `
-    <div class="drawer-head">
-      <div>
-        <h2 class="drawer-title">Usage Actuals</h2>
-        <div class="drawer-sub">${esc(r.name)} · ${esc(r.type)}</div>
+    <div class="drawer-head lg-head">
+      <div class="crumb">
+        <a id="crumbBack">Resource Unit Price</a>
+        <span class="sep">›</span>
+        <span class="cur">Actual Resource Unit Price Details</span>
       </div>
       <button class="icon-btn" id="dClose">${SVG.close}</button>
     </div>
-    <div class="drawer-body">
-      <div class="ro-note">Read-only · Historical usage of this resource price.</div>
-      <div class="ua-row"><span>Category</span><b>${esc(r.category)||'—'}</b></div>
-      <div class="ua-row"><span>Specification</span><b>${esc(r.specification)||'—'}</b></div>
-      <div class="ua-row"><span>Current Standard / Overtime / Weekend</span><b>${money(r.std)} / ${money(r.ot)} / ${money(r.wh)}</b></div>
-
-      <div class="section-label">Used in Construction (${usage.length})</div>
-      ${usage.length ? usage.map((u,i)=>`
-        <div class="hist">
-          <div class="hist-top">
-            <div class="hist-name">${i+1}. ${esc(u.site)}</div>
-            <div class="hist-fig">${money(u.rateAt)}/h · ×${esc(u.qty)}</div>
-          </div>
-          <div class="hist-meta">Period: ${esc(u.period)}<br>Price stored at creation: ${money(u.rateAt)}/h</div>
-        </div>`).join('')
-        : `<div class="empty" style="padding:30px 8px;"><p>This resource price has not been used in any Construction Unit Rate yet.</p></div>`}
+    <div class="lg-body">
+      <div class="lg-toolbar">
+        <button class="btn-update" id="uUpdate">${SVG.refresh} Update</button>
+      </div>
+      ${usage.length ? `
+      <table class="act">
+        <thead><tr>
+          <th>Site Name</th>
+          <th>Construction Unit<br>Rate Name</th>
+          <th>Actual Period<br>(Start - End)</th>
+          <th>Total<br>Working Days</th>
+          <th>Standard Price<br>Days</th>
+          <th>Overtime hours<br>(Actual)</th>
+          <th>Holiday Work<br>Days</th>
+        </tr></thead>
+        <tbody>
+          ${usage.map(u=>`
+          <tr>
+            <td>${esc(u.site)}</td>
+            <td>${esc(u.cur)}</td>
+            <td>${esc(u.period)}</td>
+            <td>${esc(u.totalDays)}日</td>
+            <td>${esc(u.stdDays)}日</td>
+            <td>${esc(u.otHours)}時間</td>
+            <td>${esc(u.holidayDays)}日</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`
+      : `<div class="empty"><h3>No actuals yet</h3><p>This resource price has not been used in any site yet.</p></div>`}
     </div>`;
   openDrawer();
   $('#dClose').addEventListener('click', closeDrawer);
+  $('#crumbBack').addEventListener('click', closeDrawer);
+  $('#uUpdate').addEventListener('click', ()=>toast('Actuals refreshed','success'));
 }
 
 /* =====================================================================
@@ -643,7 +686,7 @@ function hideModal(){ modalScrim.classList.remove('show'); }
 modalScrim.addEventListener('click', e=>{ if(e.target===modalScrim) hideModal(); });
 
 /* =====================================================================
-   TOAST  (same UI as cur.html / planning.html)
+   TOAST  (shared UI, matches planning.html)
 ===================================================================== */
 const TOAST_ICONS = {
   success:'<svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="9.25" stroke="currentColor" stroke-width="1.5"/><path d="m6.5 11.5 3 3 6-6.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
