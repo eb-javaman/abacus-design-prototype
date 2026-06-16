@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Abacus · Planning Sites (Estimation Management)</title>
 <style>
-  /* ---------- Design tokens (shared with cur.html) ---------- */
+  /* ---------- Design tokens (shared across Abacus pages) ---------- */
   :root{
     --white:#FFFFFF;
     --black:#000000;
@@ -214,9 +214,8 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
         Knowledge
       </div>
-      <a href="cur.html" class="nav-item">Construction Unit Rates</a>
       <a href="resource-pricing.html" class="nav-item">Resource Unit Price</a>
-      <a class="nav-item">Past Price</a>
+      <a class="nav-item">Past Sites</a>
     </div>
   </aside>
 
@@ -264,7 +263,7 @@ function hasPlanState(id){ return !!localStorage.getItem('abacus.planning.' + id
 function isFinalized(id){
   try{
     const snap = JSON.parse(localStorage.getItem('abacus.planning.' + id) || 'null');
-    return !!(snap && snap.acquired);
+    return !!(snap && (snap.acquired || (snap.actuals && snap.actuals.finalized)));
   }catch(_e){ return false; }
 }
 function loadSites(){
@@ -317,7 +316,7 @@ function renderRows(){
   if(!visible.length){
     document.getElementById('rows').innerHTML = `
       <div class="empty-rows">
-        まだ現場が登録されていません。<br>開始するには、<b>Register site for Quotation</b> ボタンをクリックしてください。
+        No sites yet — click <b>Register site for Quotation</b> to get started.
       </div>`;
     return;
   }
