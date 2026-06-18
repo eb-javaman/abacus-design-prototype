@@ -1,2 +1,4 @@
 # abacus-knowledge-CUR-edit
-Prototype for editing CUR in Knowledge
+Prototype of ABACUS design. 
+まだrepoルルとかないです。
+infra 中。。。
