@@ -1661,7 +1661,10 @@ function persistPlanningSnapshotNow() {
 // acquired===true used to lock this page; now it means "finalized → archived".
 (function migrateLegacyAcquired() {
   if (!state.acquired) return;
-  state.actuals = Object.assign({ planName: state.planName }, state.actuals || {}, { finalized: true });
+  state.actuals = Object.assign({ planName: state.planName }, state.actuals || {}, {
+    finalized: true,
+    planRows: JSON.parse(JSON.stringify(state.rows)),
+  });
   resetPlanningToFresh();
   persistPlanningSnapshotNow();
 })();
@@ -2560,7 +2563,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!state.imported || state.acquired) return;
     // Finalize: the submitted plan moves to the Actuals workspace (actuals.html)
     // and Execution Planning resets to a fresh state for this site.
-    state.actuals = Object.assign({ planName: state.planName }, state.actuals || {}, { finalized: true, lastSyncedAt: ts() });
+    // Archive the finalized rows so Actuals can show the plan as the "estimated" baseline.
+    state.actuals = Object.assign({ planName: state.planName }, state.actuals || {}, {
+      finalized: true, lastSyncedAt: ts(),
+      planRows: JSON.parse(JSON.stringify(state.rows)),
+    });
     resetPlanningToFresh();
     persistPlanningSnapshotNow();
     location.href = 'actuals.html?siteId=' + encodeURIComponent(SITE_ID || 'demo');
