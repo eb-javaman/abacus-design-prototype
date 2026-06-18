@@ -392,12 +392,99 @@ const ACT_DAILY_ROWS = [
   {lv1:'Storm Sewer', lv2:'12&quot; RCP', lv3:'STR7–STR11', lv4:'--', pq:'15ft', aq:'0ft', qv:null, pur:'$133.07', aur:null, urd:null}
 ];
 
+/* ---- derive Actuals from the finalized plan ----
+   Estimated columns come from the archived planning rows (snap.actuals.planRows);
+   the actual / as-built figures are deterministic mock (real actuals would come from
+   the field / Simulation, not the plan). Returns null when no plan was archived, so
+   legacy/demo snapshots fall back to the sample arrays below. */
+const f$ = n => '$' + Number(n||0).toLocaleString(undefined,{maximumFractionDigits:2});
+const PROG = [62,48,100,35,80,55,90,72];           // mock progress % per row
+const URV  = [1.12,0.94,1.20,1.05,0.88,1.15,0.97]; // mock actual unit-rate multiplier
+const DOUTF = [0.96,0.82,1.05,0.70,0.90];          // mock daily actual-vs-planned factor
+
+function deriveActuals(planRows){
+  if (!Array.isArray(planRows) || !planRows.length) return null;
+
+  const cumulative = planRows.map((r,i) => {
+    const q = Number(r.qty)||0, ur = Number(r.rate)||0;
+    const amt = (Number(r.amount)||0) || ur*q;
+    const unit = r.unit ? ' '+r.unit : '';
+    const prog = PROG[i%PROG.length];
+    const aQ = Math.round(q*prog/100);
+    const aUR = ur ? +(ur*URV[i%URV.length]).toFixed(2) : 0;
+    const aAmt = +(aQ*aUR).toFixed(2);
+    const dv = +(aAmt-amt).toFixed(2);
+    return {
+      lv1:r.lv1||'--', lv2:r.lv2||'--', lv3:r.lv3||'--', lv4:r.lv4||'--',
+      eq:  q ? q.toLocaleString()+unit : '--',
+      eur: ur ? f$(ur)+(r.unit?('/'+r.unit):'') : '--',
+      ea:  amt ? f$(amt) : '--',
+      aq:  aQ.toLocaleString()+unit,
+      aur: aUR ? f$(aUR) : null,
+      aa:  f$(aAmt),
+      diff: dv===0 ? null : (dv>0?'+':'-')+f$(Math.abs(dv)),
+      prog,
+      cost: ur ? Math.round(aUR/ur*100) : 0,
+      exp:  amt ? Math.round(aAmt/amt*100) : 0,
+    };
+  });
+
+  const daily = planRows.map((r,i) => {
+    const unit = r.unit ? ' '+r.unit : '';
+    const dout = Number(r.dout) || (Number(r.cdays) ? Math.round((Number(r.qty)||0)/Number(r.cdays)) : 0);
+    const ur = Number(r.rate)||0;
+    const aQ = Math.round(dout*DOUTF[i%DOUTF.length]);
+    const aUR = ur ? +(ur*URV[i%URV.length]).toFixed(2) : 0;
+    const qv = dout ? Math.round((aQ-dout)/dout*100) : null;
+    const urd = (ur&&aUR) ? +(aUR-ur).toFixed(2) : null;
+    return {
+      lv1:r.lv1||'--', lv2:r.lv2||'--', lv3:r.lv3||'--', lv4:r.lv4||'--',
+      pq:  dout ? dout.toLocaleString()+unit : '--',
+      aq:  aQ.toLocaleString()+unit,
+      qv:  qv==null ? null : (qv>=0?'+':'')+qv+'%',
+      pur: ur ? f$(ur) : '--',
+      aur: aUR ? f$(aUR) : null,
+      urd: urd==null ? null : (urd>=0?'+':'-')+f$(Math.abs(urd)),
+    };
+  });
+
+  // Summary: group by Lv1 task; list each group's equipment resources (hours + assigned rate).
+  const groupsMap = new Map();
+  planRows.forEach(r => {
+    const key = r.lv1 || '—';
+    if (!groupsMap.has(key)) groupsMap.set(key, { name:key, amt:0, eq:new Map() });
+    const g = groupsMap.get(key);
+    g.amt += Number(r.amount)||0;
+    ((r.sc && r.sc.tasks) || []).forEach(t => {
+      const name = t.eqName || t.eq || '—';
+      if (!g.eq.has(name)) g.eq.set(name, { name, hours:0, std:(t.resource&&t.resource.std)??null });
+      const e = g.eq.get(name);
+      e.hours += Number(t.stdH)||0;
+      if (e.std==null && t.resource) e.std = t.resource.std;
+    });
+  });
+  const summaryGroups = [...groupsMap.values()].map(g => ({
+    name: g.name,
+    total: g.amt ? f$(g.amt) : '',
+    rows: [...g.eq.values()].map(e => {
+      const amt = (e.std!=null) ? +(e.std*e.hours).toFixed(2) : null;
+      return [ e.name, '--', e.std!=null?f$(e.std):'--', e.hours+'h', amt!=null?f$(amt):'--' ];
+    })
+  }));
+  const grand = [...groupsMap.values()].reduce((s,g)=>s+g.amt,0);
+
+  return { cumulative, daily, summaryGroups, summaryTotal: grand?f$(grand):'' };
+}
+
 /* seed once: actuals data attaches to the site snapshot */
 if (!snap.actuals) snap.actuals = { finalized:true };
 if (!snap.actuals.cumulative){
+  const derived = deriveActuals(snap.actuals.planRows);
   Object.assign(snap.actuals, {
-    cumulative: ACT_CUM_ROWS,
-    daily: { 'mm/dd/yyyy': ACT_DAILY_ROWS },
+    cumulative: derived ? derived.cumulative : ACT_CUM_ROWS,
+    daily: { 'mm/dd/yyyy': derived ? derived.daily : ACT_DAILY_ROWS },
+    summaryGroups: derived ? derived.summaryGroups : null,
+    summaryTotal: derived ? derived.summaryTotal : null,
     dataSource: 'Dashboard',
     summarySource: 'Simulation',
     summaryCategory: 'Transport Vehicle',
@@ -590,6 +677,21 @@ function asStickyCells(vals){
 function renderSummary(panel){
   const cat = A.summaryCategory || 'Transport Vehicle';
   const src = A.summarySource || 'Simulation';
+  // Body: plan-derived task groups + their equipment resources when available; else mock.
+  const groups = A.summaryGroups;
+  const summaryBody = (groups && groups.length)
+    ? groups.map(g =>
+        `<tr class="as-group">${asStickyCells([g.name,'','','',g.total||''])}${asDayCells('empty')}</tr>`
+        + (g.rows.length
+            ? g.rows.map(r => `<tr>${asStickyCells(r)}${asDayCells('value')}</tr>`).join('')
+            : `<tr>${asStickyCells(['--','--','--','--','--'])}${asDayCells('empty')}</tr>`)
+      ).join('')
+      + `<tr class="as-group">${asStickyCells(['Period Total Amount','','','', A.summaryTotal||''])}${asDayCells('na-all')}</tr>`
+    : `<tr class="as-group">${asStickyCells(['Excavation','','','','$1,288.31'])}${asDayCells('empty')}</tr>`
+      + AS_EXCAVATION_ROWS.map(r => `<tr>${asStickyCells(r)}${asDayCells('value')}</tr>`).join('')
+      + `<tr class="as-group">${asStickyCells(['Embankment','','','',''])}${asDayCells('empty')}</tr>`
+      + Array.from({length:7}, () => `<tr>${asStickyCells(['--','--','--','--','--'])}${asDayCells('empty')}</tr>`).join('')
+      + `<tr class="as-group">${asStickyCells(['Period Total Amount','','','','$644.12'])}${asDayCells('na-all')}</tr>`;
   panel.innerHTML = `
   <div class="actuals-card">
     <div class="as-controls">
@@ -616,13 +718,7 @@ function renderSummary(panel){
           ${['Name','Standard','Unit Rate','Total Quantity','Total Amount'].map((h,i) => `<th class="as-c${i+1}">${h}${SORT_ICON}</th>`).join('')}
           ${asDays.map(c => `<th class="day-col${c.off ? ' offday' : ''}">${c.day}</th>`).join('')}
         </tr></thead>
-        <tbody>
-          <tr class="as-group">${asStickyCells(['Excavation','','','','$1,288.31'])}${asDayCells('empty')}</tr>
-          ${AS_EXCAVATION_ROWS.map(r => `<tr>${asStickyCells(r)}${asDayCells('value')}</tr>`).join('')}
-          <tr class="as-group">${asStickyCells(['Embankment','','','',''])}${asDayCells('empty')}</tr>
-          ${Array.from({length:7}, () => `<tr>${asStickyCells(['--','--','--','--','--'])}${asDayCells('empty')}</tr>`).join('')}
-          <tr class="as-group">${asStickyCells(['Period Total Amount','','','','$644.12'])}${asDayCells('na-all')}</tr>
-        </tbody>
+        <tbody>${summaryBody}</tbody>
       </table>
     </div>
   </div>`;
